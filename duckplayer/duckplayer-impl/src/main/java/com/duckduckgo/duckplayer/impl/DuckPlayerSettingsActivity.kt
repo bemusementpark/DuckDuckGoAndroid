@@ -17,11 +17,13 @@
 package com.duckduckgo.duckplayer.impl
 
 import android.os.Bundle
+import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.duckduckgo.anvil.annotations.ContributeToActivityStarter
 import com.duckduckgo.anvil.annotations.InjectWith
+import com.duckduckgo.browser.api.ui.BrowserScreens.WebViewActivityWithParams
 import com.duckduckgo.common.ui.DuckDuckGoActivity
 import com.duckduckgo.common.ui.view.dialog.RadioListAlertDialogBuilder
 import com.duckduckgo.common.ui.viewbinding.viewBinding
@@ -31,7 +33,10 @@ import com.duckduckgo.duckplayer.api.PrivatePlayerMode
 import com.duckduckgo.duckplayer.api.PrivatePlayerMode.AlwaysAsk
 import com.duckduckgo.duckplayer.api.PrivatePlayerMode.Disabled
 import com.duckduckgo.duckplayer.api.PrivatePlayerMode.Enabled
+import com.duckduckgo.duckplayer.impl.DuckPlayerSettingsViewModel.ViewState
 import com.duckduckgo.duckplayer.impl.databinding.ActivityDuckPlayerSettingsBinding
+import com.duckduckgo.navigation.api.GlobalActivityStarter
+import javax.inject.Inject
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
@@ -41,6 +46,8 @@ class DuckPlayerSettingsActivity : DuckDuckGoActivity() {
 
     private val viewModel: DuckPlayerSettingsViewModel by bindViewModel()
     private val binding: ActivityDuckPlayerSettingsBinding by viewBinding()
+
+    @Inject lateinit var globalActivityStarter: GlobalActivityStarter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +62,9 @@ class DuckPlayerSettingsActivity : DuckDuckGoActivity() {
     private fun configureUiEventHandlers() {
         binding.duckPlayerModeSelector.setClickListener {
             viewModel.duckPlayerModeSelectorClicked()
+        }
+        binding.duckPlayerDisabledLearnMoreButton.setOnClickListener {
+            viewModel.onContingencyLearnMoreClicked()
         }
     }
 
@@ -74,6 +84,15 @@ class DuckPlayerSettingsActivity : DuckDuckGoActivity() {
         when (it) {
             is DuckPlayerSettingsViewModel.Command.OpenPlayerModeSelector -> {
                 launchPlayerModeSelector(it.current)
+            }
+            is DuckPlayerSettingsViewModel.Command.LaunchDuckPlayerContingencyPage -> {
+                globalActivityStarter.start(
+                    this,
+                    WebViewActivityWithParams(
+                        url = it.helpPageLink,
+                        screenTitle = getString(R.string.duck_player_unavailable),
+                    ),
+                )
             }
         }
     }
@@ -110,7 +129,17 @@ class DuckPlayerSettingsActivity : DuckDuckGoActivity() {
             .show()
     }
 
-    private fun renderViewState(viewState: DuckPlayerSettingsViewModel.ViewState) {
+    private fun renderViewState(viewState: ViewState) {
+        when (viewState) {
+            is ViewState.Enabled -> {
+                binding.duckPlayerModeSelector.isEnabled = true
+                binding.duckPlayerDisabledSection.isVisible = false
+            }
+            is ViewState.DisabledWithHelpLink -> {
+                binding.duckPlayerModeSelector.isEnabled = false
+                binding.duckPlayerDisabledSection.isVisible = true
+            }
+        }
         binding.duckPlayerModeSelector.setSecondaryText(
             when (viewState.privatePlayerMode) {
                 Enabled -> getString(R.string.duck_player_mode_always)
