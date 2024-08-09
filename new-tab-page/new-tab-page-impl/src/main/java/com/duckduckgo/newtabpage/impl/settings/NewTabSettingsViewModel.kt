@@ -22,13 +22,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.duckduckgo.anvil.annotations.ContributesViewModel
 import com.duckduckgo.common.utils.DispatcherProvider
+import com.duckduckgo.common.utils.swap
 import com.duckduckgo.di.scopes.ActivityScope
 import com.duckduckgo.newtabpage.api.NewTabPageSectionSettingsPlugin
 import com.duckduckgo.newtabpage.impl.pixels.NewTabPixels
 import com.duckduckgo.newtabpage.impl.shortcuts.NewTabShortcutDataStore
 import com.duckduckgo.newtabpage.impl.shortcuts.NewTabShortcutsProvider
-import com.duckduckgo.newtabpage.impl.shortcuts.ShortcutsViewModel.ViewState
-import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -40,6 +39,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
 @SuppressLint("NoLifecycleObserver")
 @ContributesViewModel(ActivityScope::class)
@@ -94,13 +94,11 @@ class NewTabSettingsViewModel @Inject constructor(
     }
 
     fun onSectionsSwapped(
-        newSecondPosition: Int,
-        newFirstPosition: Int,
+        firstPosition: Int,
+        secondPosition: Int,
     ) {
         viewModelScope.launch(dispatcherProvider.io()) {
-            val settings = newTabSettingsStore.sectionSettings.toMutableList()
-            settings.swap(newFirstPosition, newSecondPosition)
-            newTabSettingsStore.sectionSettings = settings
+            newTabSettingsStore.run { sectionSettings = sectionSettings.swap(firstPosition, secondPosition) }
             pixels.fireSectionReordered()
         }
     }
@@ -129,13 +127,4 @@ class NewTabSettingsViewModel @Inject constructor(
             renderViews()
         }
     }
-}
-
-fun <T> MutableList<T>.swap(
-    idx1: Int,
-    idx2: Int,
-): MutableList<T> = apply {
-    val t = this[idx1]
-    this[idx1] = this[idx2]
-    this[idx2] = t
 }

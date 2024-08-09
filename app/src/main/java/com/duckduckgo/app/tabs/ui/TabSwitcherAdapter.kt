@@ -60,7 +60,7 @@ class TabSwitcherAdapter(
     private val faviconManager: FaviconManager,
 ) : Adapter<TabViewHolder>() {
 
-    private val list = mutableListOf<TabEntity>()
+    private var list = listOf<TabEntity>()
 
     private var isDragging: Boolean = false
     private var layoutType: LayoutType = LayoutType.GRID
@@ -264,8 +264,8 @@ class TabSwitcherAdapter(
     fun updateData(updatedList: List<TabEntity>) {
         val diffResult = DiffUtil.calculateDiff(TabEntityDiffCallback(list, updatedList))
 
-        list.clear()
-        list.addAll(updatedList)
+        list = updatedList
+        
         diffResult.dispatchUpdatesTo(this)
     }
 
